@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     global client, gemini_model, bearer_token, server_port
 
     config = load_config()
-    gemini_model = config.get("gemini_model", "gemini-2.0-flash-exp")
+    gemini_model = config.get("gemini_model", "gemini-3-flash-preview")
     bearer_token = config.get("token", "")
     server_port = config.get("server", {}).get("port", 8000)
 
