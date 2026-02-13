@@ -1,0 +1,12 @@
+[project]
+name = "evenai-gemini-bridge"
+version = "0.1.0"
+description = "OpenAI-compatible API bridge to Google Gemini"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "google-genai[aiohttp]>=0.2.0",
+    "pyyaml>=6.0",
+]
