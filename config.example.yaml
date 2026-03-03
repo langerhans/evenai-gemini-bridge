@@ -13,3 +13,7 @@ gemini_model: "gemini-3-flash-preview"
 # Optional: Server configuration
 server:
   port: 8000
+
+# Optional: enable Google Search grounding (default: false)
+# When enabled, Gemini will search the web for up-to-date information when relevant.
+google_search: false

@@ -28,6 +28,7 @@ client: genai.Client | None = None
 gemini_model: str = ""
 bearer_token: str = ""
 server_port: int = 8000
+use_google_search: bool = False
 
 
 def load_config() -> dict[str, Any]:
@@ -44,12 +45,13 @@ def load_config() -> dict[str, Any]:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Initialize application state on startup."""
-    global client, gemini_model, bearer_token, server_port
+    global client, gemini_model, bearer_token, server_port, use_google_search
 
     config = load_config()
     gemini_model = config.get("gemini_model", "gemini-3-flash-preview")
     bearer_token = config.get("token", "")
     server_port = config.get("server", {}).get("port", 8000)
+    use_google_search = bool(config.get("google_search", False))
 
     api_key = config.get("gemini_api_key")
     if not api_key or api_key == "your-api-key-here":
@@ -58,6 +60,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         client = genai.Client(api_key=api_key)
         logging.getLogger("google_genai.models").setLevel(logging.WARNING)
         logger.info("Gemini client initialized with model: %s", gemini_model)
+        if use_google_search:
+            logger.info("Google Search grounding enabled")
 
     yield
 
@@ -182,18 +186,30 @@ async def chat_completions(request: Request) -> JSONResponse:
         # Convert to Gemini format
         gemini_contents = convert_messages_to_gemini(messages)
         
+        # Build tools list
+        tools = [types.Tool(google_search=types.GoogleSearch())] if use_google_search else None
+
         # Generate response using new API
         response = await client.aio.models.generate_content(
             model=gemini_model,
             contents=gemini_contents,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
+                tools=tools,
             ),
         )
-        
+
         # Extract response text
         response_text = getattr(response, "text", "") or ""
-        
+
+        # Log any search queries Gemini made
+        try:
+            grounding = response.candidates[0].grounding_metadata
+            if grounding and grounding.web_search_queries:
+                logger.info("Search queries: %s", grounding.web_search_queries)
+        except (AttributeError, IndexError):
+            pass
+
         logger.info("Model: %s", response_text)
         
         # Convert response to OpenAI format
